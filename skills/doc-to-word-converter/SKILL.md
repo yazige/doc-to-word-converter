@@ -139,7 +139,7 @@ If Codex thread-management tools are available and the user says yes, create or 
    - Avoid only harmful merges: do not merge unrelated detail rows just to save work, and do not put many source rows into one text-only cell when the source shows separate grid rows.
    - Preserve complex table headers. If the source has diagonal corner headers, grouped column headers, or multi-row headers, rebuild that structure as editable Word table cells instead of flattening it into simple column names.
    - For diagonal header cells, use Word diagonal borders when practical; if the exact diagonal text placement is uncertain, keep both header labels in the same corner cell and report that the diagonal layout was approximated.
-   - For grouped headers such as `住宿费 / 交通费 / 出差补助`, keep the two-level header layout: group header row first, subcategory row second, then data rows.
+   - For grouped headers such as cost categories, reimbursement categories, scoring groups, or regional standards, keep the two-level header layout: group header row first, subcategory row second, then data rows.
 
 6. **Scrub and validate**
    - Run:
