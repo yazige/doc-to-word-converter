@@ -56,6 +56,26 @@ class CodexAdaptationTests(unittest.TestCase):
         for phrase in forbidden:
             self.assertNotIn(phrase, text)
 
+    def test_skill_covers_public_capability_contract(self) -> None:
+        text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        required = [
+            "Capability Contract",
+            "Text-layer PDF",
+            "Scanned PDF",
+            "PPT/PPTX",
+            "Excel/CSV",
+            "Image files",
+            "DOCX with embedded images",
+            "Email attachments",
+            "Repeated watermarks",
+            "corner logos",
+            "handwritten annotations",
+            "health check",
+            "former-company",
+        ]
+        for phrase in required:
+            self.assertIn(phrase, text)
+
     def test_init_workspace_creates_queue_dirs_and_status(self) -> None:
         import tempfile
 

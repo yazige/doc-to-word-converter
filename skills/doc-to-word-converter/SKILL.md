@@ -31,6 +31,25 @@ python scripts/init_workspace.py "<workspace>"
 
 The script creates `TBD`, `Done`, and `New`, then writes `.doc-to-word-converter/status.json`.
 
+If the workspace is used by a Codex automation, check `TBD/` first. If `TBD/` is empty, report that there are no files to convert and stop. Do not run extraction or create placeholder outputs for an empty queue.
+
+Email attachments are handled only after the user has exported or saved them as local files into `TBD/`. This skill does not connect to email accounts, mailboxes, or remote storage by itself.
+
+## Capability Contract
+
+This skill is meant to match the public project description. Treat these as the supported conversion intents and the limits you must report honestly.
+
+| Source type | Expected handling |
+|---|---|
+| Text-layer PDF | Use the text layer where available; inspect page count, images, tables, and orientation before building Word. |
+| Scanned PDF | OCR or visual transcription only when OCR/vision support is available; otherwise leave the file in `TBD/` and report the missing capability. |
+| PPT/PPTX | Extract slide text, speaker notes when available, and content images; keep slide order and use slide dimensions to infer output orientation. |
+| Excel/CSV | Convert rows into editable Word tables. Preserve sheet/table order, header rows, and useful labels rather than flattening everything into prose. |
+| Image files | OCR or visually transcribe into editable Word only when the text is readable; report low resolution or missing OCR instead of pretending success. |
+| DOCX with embedded images | Read editable text first, inspect embedded images, OCR only content images when OCR/vision support is available, and rebuild a clean version. |
+
+The output should be a clean, editable `.docx`, not a container full of screenshots. If the source can only be represented as an image with the current tools, say so and do not move it to `Done/`.
+
 ## Quality-first batching
 
 Always run complexity assessment before converting files:
@@ -117,15 +136,20 @@ If Codex thread-management tools are available and the user says yes, create or 
 3. **Inspect source and extract content**
    - PDF: run `scripts/pdf_inventory.py`. Use text layer when available.
    - PPT/PPTX: use `python-pptx` to extract slide text and notes.
-   - Excel/CSV: use spreadsheet rows as Word tables.
-   - DOCX: read editable text; inspect embedded images when present.
+   - Excel/CSV: use spreadsheet rows as Word tables; preserve sheet/table order and header rows.
+   - DOCX: read editable text first; inspect embedded images when present; treat image-only DOCX as a visual/OCR task.
    - Images/scans: OCR only when Tesseract or visual transcription is available. If not, report the limitation instead of pretending OCR was done.
+   - For every source type, compare extracted content against the source structure. If extraction is suspiciously short, missing obvious tables, or ignores visible sections, stop and reprocess that file alone instead of continuing the batch.
 
 4. **Clean and anonymize**
    - Follow `references/redaction-rules.md`.
+   - Before using the former-company `****` rule, check whether the user has configured real former-company identifiers in `references/redaction-rules.md`.
+   - If the former-company identifiers still look like examples, do not guess. Use role placeholders for sensitive company names and report that the former-company `****` mapping is not configured.
    - Former company identifiers -> `****`.
    - Other sensitive values -> role placeholders like `[乙方公司名称]`, `[自然人姓名]`, `[联系电话]`.
    - Keep uncertain replacements marked as `【待确认：...】`.
+   - Repeated watermarks, corner logos, decorative QR codes, headers, and footers are branding/noise. Do not OCR, embed, or describe them as body content.
+   - Scanned stamps, signatures, and handwritten annotations should not be copied into reusable templates. Replace signature/stamp areas with editable blank fields or role placeholders, and report any uncertain handwritten content.
 
 5. **Build Word**
    - Use the detected orientation.
@@ -157,6 +181,13 @@ python scripts/check_docx_table_granularity.py output_scrubbed.docx --min-rows 8
 ```
 
    - If a check fails, fix the document before moving it to `New`.
+   - After each file, do a health check before continuing the batch:
+     - extracted/OCR text is not obviously shorter than expected from the source;
+     - no generated code or logs were truncated mid-task;
+     - tables are not flattened into oversized text cells;
+     - orientation still matches the source;
+     - privacy and quality checks were actually run on the final file in `New/`.
+   - If any health check is uncertain, leave the source in `TBD/` or return it from the working area to `TBD/`, and explain what needs manual confirmation.
 
 7. **Move files and report**
    - Move the source file to `Done/`.
